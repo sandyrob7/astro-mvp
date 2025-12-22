@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     waitUntil: "networkidle0",
   });
 
-  const pdfBuffer = await page.pdf({
+  const pdfUint8 = await page.pdf({
     format: "A4",
     margin: {
       top: "24mm",
@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
 
   await browser.close();
 
-  return new Response(Buffer.from(pdfBuffer), {
+  // ✅ THIS IS THE IMPORTANT PART
+  const pdfArrayBuffer = pdfUint8.buffer.slice(
+    pdfUint8.byteOffset,
+    pdfUint8.byteOffset + pdfUint8.byteLength
+  );
+
+  return new Response(pdfArrayBuffer, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="astrology-report.pdf"',
