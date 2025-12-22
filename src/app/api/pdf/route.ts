@@ -1,13 +1,17 @@
 import { NextRequest } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import { renderPdfHtml } from "@/lib/pdfTemplate";
+
+export const runtime = "nodejs"; // IMPORTANT
 
 export async function POST(req: NextRequest) {
   const report = await req.json();
 
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
   });
 
   const page = await browser.newPage();
