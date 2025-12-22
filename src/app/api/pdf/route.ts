@@ -3,7 +3,7 @@ import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { renderPdfHtml } from "@/lib/pdfTemplate";
 
-export const runtime = "nodejs"; // REQUIRED for Puppeteer on Vercel
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const report = await req.json();
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const browser = await puppeteer.launch({
     args: chromium.args,
     executablePath: await chromium.executablePath(),
-    headless: true, // explicitly set, do NOT read from chromium
+    headless: true,
   });
 
   const page = await browser.newPage();
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   await browser.close();
 
-  return new Response(pdfBuffer, {
+  return new Response(Buffer.from(pdfBuffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="astrology-report.pdf"',
