@@ -3,7 +3,7 @@ import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { renderPdfHtml } from "@/lib/pdfTemplate";
 
-export const runtime = "nodejs"; // IMPORTANT
+export const runtime = "nodejs"; // REQUIRED for Puppeteer on Vercel
 
 export async function POST(req: NextRequest) {
   const report = await req.json();
@@ -11,10 +11,11 @@ export async function POST(req: NextRequest) {
   const browser = await puppeteer.launch({
     args: chromium.args,
     executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+    headless: true, // explicitly set, do NOT read from chromium
   });
 
   const page = await browser.newPage();
+
   await page.setContent(renderPdfHtml(report), {
     waitUntil: "networkidle0",
   });
