@@ -32,13 +32,12 @@ export async function POST(req: NextRequest) {
 
   await browser.close();
 
-  // ✅ THIS IS THE IMPORTANT PART
-  const pdfArrayBuffer = pdfUint8.buffer.slice(
-    pdfUint8.byteOffset,
-    pdfUint8.byteOffset + pdfUint8.byteLength
-  );
+  // ✅ THE ONLY RETURN TYPE NEXT.JS APP ROUTER NEVER ARGUES WITH
+  const pdfBlob = new Blob([pdfUint8], {
+    type: "application/pdf",
+  });
 
-  return new Response(pdfArrayBuffer, {
+  return new Response(pdfBlob, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="astrology-report.pdf"',
