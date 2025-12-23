@@ -6,26 +6,56 @@ export default function Home() {
   const [data, setData] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function validateForm(form: FormData) {
+    const dob = new Date(form.get("dob") as string);
+    const hour = Number(form.get("hour"));
+    const minute = Number(form.get("minute"));
+
+    const now = new Date();
+    const oldest = new Date();
+    oldest.setFullYear(now.getFullYear() - 110);
+
+    if (dob > now) return "Date of birth cannot be in the future.";
+    if (dob < oldest) return "Date of birth cannot be older than 110 years.";
+
+    if (hour < 0 || hour > 23) return "Hour must be between 0 and 23.";
+    if (minute < 0 || minute > 59) return "Minute must be between 0 and 59.";
+
+    return null;
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setError(null);
 
     const form = new FormData(e.currentTarget);
+    const validationError = validateForm(form);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
 
     const res = await fetch("/api/astro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.get("name"),
+        gender: form.get("gender"),
         dob: form.get("dob"),
+        hour: Number(form.get("hour")),
+        minute: Number(form.get("minute")),
         place: form.get("place"),
       }),
     });
 
     const json = await res.json();
     setData(json);
-    setReport(json); // still temporary
+    setReport(json);
     setLoading(false);
   }
 
@@ -55,14 +85,14 @@ export default function Home() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "system-ui, sans-serif",
         padding: 20,
+        fontFamily: "system-ui, sans-serif",
       }}
     >
       <div
         style={{
           width: "100%",
-          maxWidth: 420,
+          maxWidth: 480,
           background: "#020617",
           border: "1px solid #1e293b",
           borderRadius: 12,
@@ -70,27 +100,66 @@ export default function Home() {
           color: "#e5e7eb",
         }}
       >
-        <h2 style={{ fontSize: 22, marginBottom: 4 }}>
+        <h2 style={{ fontSize: 22, marginBottom: 6 }}>
           Astrology Demo
         </h2>
         <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 20 }}>
-          Birth chart generation preview
+          Accurate birth chart calculation
         </p>
 
         <form onSubmit={submit}>
           <label style={labelStyle}>Name</label>
           <input name="name" required style={inputStyle} />
 
+          <label style={labelStyle}>Gender</label>
+          <select name="gender" required style={inputStyle}>
+            <option value="">Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+
           <label style={labelStyle}>Date of Birth</label>
           <input type="date" name="dob" required style={inputStyle} />
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Hour (0–23)</label>
+              <input
+                type="number"
+                name="hour"
+                min={0}
+                max={23}
+                required
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Minute (0–59)</label>
+              <input
+                type="number"
+                name="minute"
+                min={0}
+                max={59}
+                required
+                style={inputStyle}
+              />
+            </div>
+          </div>
 
           <label style={labelStyle}>Place of Birth</label>
           <input name="place" required style={inputStyle} />
 
+          {error && (
+            <p style={{ color: "#f87171", marginTop: 10 }}>
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
             style={{
-              marginTop: 16,
+              marginTop: 18,
               width: "100%",
               padding: "10px 0",
               background: "#4f46e5",
@@ -101,7 +170,7 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            {loading ? "Generating..." : "Generate Report"}
+            {loading ? "Generating…" : "Generate Report"}
           </button>
         </form>
 
@@ -109,20 +178,20 @@ export default function Home() {
           <>
             <div
               style={{
-                marginTop: 24,
-                paddingTop: 16,
+                marginTop: 20,
+                paddingTop: 12,
                 borderTop: "1px solid #1e293b",
                 fontSize: 13,
                 color: "#cbd5f5",
               }}
             >
-              <b>Chart generated successfully.</b>
+              Chart generated successfully.
             </div>
 
             <button
               onClick={() => downloadPdf(report)}
               style={{
-                marginTop: 16,
+                marginTop: 14,
                 width: "100%",
                 padding: "10px 0",
                 background: "#16a34a",
@@ -142,13 +211,11 @@ export default function Home() {
   );
 }
 
-/* ---------- styles ---------- */
-
 const labelStyle = {
   display: "block",
   fontSize: 12,
-  marginBottom: 4,
   marginTop: 12,
+  marginBottom: 4,
   color: "#cbd5f5",
 };
 
