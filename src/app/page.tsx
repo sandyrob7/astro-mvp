@@ -6,9 +6,9 @@ export default function Home() {
   const [data, setData] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
 
-  async function submit(e: any) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.target);
+    const form = new FormData(e.currentTarget);
 
     const res = await fetch("/api/astro", {
       method: "POST",
@@ -22,17 +22,14 @@ export default function Home() {
 
     const json = await res.json();
     setData(json);
-
-    // For now, use API response directly as report
-    // Later, you can transform this into a structured report
-    setReport(json);
+    setReport(json); // temporary: API response used as report
   }
 
-  async function downloadPdf(report: any) {
+  async function downloadPdf(rep: any) {
     const res = await fetch("/api/pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(report),
+      body: JSON.stringify(rep),
     });
 
     const blob = await res.blob();
