@@ -2,59 +2,15 @@
 
 import { useState } from "react";
 
-/* ---------- helpers ---------- */
-
-const SIGNS = [
-  "Aries","Taurus","Gemini","Cancer","Leo","Virgo",
-  "Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"
-];
-
-function signFromLongitude(lon: number) {
-  return SIGNS[Math.floor(((lon % 360) + 360) / 30)];
-}
-
-function buildReport(api: any) {
-  const chart = api.chart;
-
-  return {
-    meta: {
-      name: api.input?.name,
-      generatedAt: new Date().toISOString(),
-    },
-
-    birth: {
-      date: api.input?.dob,
-      place: api.input?.place,
-      ascendant: {
-        longitude: chart.houses.ascendant,
-        sign: signFromLongitude(chart.houses.ascendant),
-      },
-    },
-
-    planets: Object.entries(chart.planets).map(
-      ([planet, p]: any) => ({
-        planet,
-        sign: signFromLongitude(p.longitude),
-        house: p.house,
-      })
-    ),
-
-    aspects: chart.aspects.map((a: any) => ({
-      between: a.between.join(" – "),
-      type: a.type,
-      orb: a.orb,
-    })),
-  };
-}
-
-/* ---------- component ---------- */
-
 export default function Home() {
   const [data, setData] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setLoading(true);
+
     const form = new FormData(e.currentTarget);
 
     const res = await fetch("/api/astro", {
@@ -69,7 +25,8 @@ export default function Home() {
 
     const json = await res.json();
     setData(json);
-    setReport(buildReport(json)); // ✅ fixed
+    setReport(json); // still temporary
+    setLoading(false);
   }
 
   async function downloadPdf(rep: any) {
@@ -91,64 +48,115 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 600, margin: "50px auto", fontFamily: "sans-serif" }}>
-      <h2>Astrology Demo</h2>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#0f172a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "system-ui, sans-serif",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#020617",
+          border: "1px solid #1e293b",
+          borderRadius: 12,
+          padding: 24,
+          color: "#e5e7eb",
+        }}
+      >
+        <h2 style={{ fontSize: 22, marginBottom: 4 }}>
+          Astrology Demo
+        </h2>
+        <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 20 }}>
+          Birth chart generation preview
+        </p>
 
-      <form onSubmit={submit}>
-        <input name="name" placeholder="Name" required />
-        <br /><br />
-        <input type="date" name="dob" required />
-        <br /><br />
-        <input name="place" placeholder="Place of Birth" required />
-        <br /><br />
-        <button type="submit">Generate</button>
-      </form>
+        <form onSubmit={submit}>
+          <label style={labelStyle}>Name</label>
+          <input name="name" required style={inputStyle} />
 
-      {report && (
-        <>
-          <hr style={{ margin: "30px 0" }} />
+          <label style={labelStyle}>Date of Birth</label>
+          <input type="date" name="dob" required style={inputStyle} />
 
-          <h3>Birth Summary</h3>
-          <p><b>Name:</b> {report.meta.name}</p>
-          <p><b>Date:</b> {report.birth.date}</p>
-          <p><b>Place:</b> {report.birth.place}</p>
-          <p>
-            <b>Ascendant:</b> {report.birth.ascendant.sign}
-          </p>
-
-          <h3>Planets</h3>
-          <ul>
-            {report.planets.map((p: any) => (
-              <li key={p.planet}>
-                {p.planet}: {p.sign}, House {p.house}
-              </li>
-            ))}
-          </ul>
-
-          <h3>Aspects</h3>
-          <ul>
-            {report.aspects.map((a: any, i: number) => (
-              <li key={i}>
-                {a.between} ({a.type}, orb {a.orb}°)
-              </li>
-            ))}
-          </ul>
+          <label style={labelStyle}>Place of Birth</label>
+          <input name="place" required style={inputStyle} />
 
           <button
-            onClick={() => downloadPdf(report)}
+            type="submit"
             style={{
-              marginTop: 20,
-              padding: "8px 16px",
-              background: "green",
+              marginTop: 16,
+              width: "100%",
+              padding: "10px 0",
+              background: "#4f46e5",
               color: "white",
               border: "none",
+              borderRadius: 6,
+              fontWeight: 500,
               cursor: "pointer",
             }}
           >
-            Download PDF
+            {loading ? "Generating..." : "Generate Report"}
           </button>
-        </>
-      )}
+        </form>
+
+        {data && (
+          <>
+            <div
+              style={{
+                marginTop: 24,
+                paddingTop: 16,
+                borderTop: "1px solid #1e293b",
+                fontSize: 13,
+                color: "#cbd5f5",
+              }}
+            >
+              <b>Chart generated successfully.</b>
+            </div>
+
+            <button
+              onClick={() => downloadPdf(report)}
+              style={{
+                marginTop: 16,
+                width: "100%",
+                padding: "10px 0",
+                background: "#16a34a",
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Download PDF
+            </button>
+          </>
+        )}
+      </div>
     </main>
   );
 }
+
+/* ---------- styles ---------- */
+
+const labelStyle = {
+  display: "block",
+  fontSize: 12,
+  marginBottom: 4,
+  marginTop: 12,
+  color: "#cbd5f5",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "8px 10px",
+  borderRadius: 6,
+  border: "1px solid #334155",
+  background: "#020617",
+  color: "#e5e7eb",
+};
