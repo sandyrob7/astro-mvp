@@ -2,13 +2,69 @@
 
 import { useState } from "react";
 
+/* =========================
+   Helpers
+========================= */
+
+const SIGNS = [
+  "Aries","Taurus","Gemini","Cancer","Leo","Virgo",
+  "Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"
+];
+
+function signFromLongitude(lon: number) {
+  return SIGNS[Math.floor(((lon % 360) + 360) / 30)];
+}
+
+function buildReport(api: any) {
+  const chart = api.chart;
+
+  return {
+    report_version: "1.0",
+
+    meta: {
+      name: api.input.name,
+      gender: api.input.gender,
+      generated_at: api.meta.timestamp_utc,
+    },
+
+    birth: {
+      dob: api.input.dob,
+      place: api.input.place,
+      latitude: api.input.lat,
+      longitude: api.input.lon,
+      time: {
+        hour: api.input.hour,
+        minute: api.input.minute,
+      },
+    },
+
+    planets: Object.entries(chart.planets).map(
+      ([planet, p]: any) => ({
+        planet,
+        longitude: p.longitude,
+        sign: signFromLongitude(p.longitude),
+      })
+    ),
+
+    aspects: chart.aspects.map((a: any) => ({
+      between: a.between.join(" – "),
+      type: a.type,
+      orb: a.orb,
+    })),
+  };
+}
+
+/* =========================
+   Page
+========================= */
+
 export default function Home() {
   const [data, setData] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function validateForm(form: FormData) {
+  function validate(form: FormData) {
     const dob = new Date(form.get("dob") as string);
     const hour = Number(form.get("hour"));
     const minute = Number(form.get("minute"));
@@ -19,7 +75,6 @@ export default function Home() {
 
     if (dob > now) return "Date of birth cannot be in the future.";
     if (dob < oldest) return "Date of birth cannot be older than 110 years.";
-
     if (hour < 0 || hour > 23) return "Hour must be between 0 and 23.";
     if (minute < 0 || minute > 59) return "Minute must be between 0 and 59.";
 
@@ -31,8 +86,7 @@ export default function Home() {
     setError(null);
 
     const form = new FormData(e.currentTarget);
-    const validationError = validateForm(form);
-
+    const validationError = validate(form);
     if (validationError) {
       setError(validationError);
       return;
@@ -55,7 +109,7 @@ export default function Home() {
 
     const json = await res.json();
     setData(json);
-    setReport(json);
+    setReport(buildReport(json));
     setLoading(false);
   }
 
@@ -92,7 +146,7 @@ export default function Home() {
       <div
         style={{
           width: "100%",
-          maxWidth: 480,
+          maxWidth: 520,
           background: "#020617",
           border: "1px solid #1e293b",
           borderRadius: 12,
@@ -104,7 +158,7 @@ export default function Home() {
           Astrology Demo
         </h2>
         <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 20 }}>
-          Accurate birth chart calculation
+          Deterministic birth chart generation
         </p>
 
         <form onSubmit={submit}>
@@ -174,7 +228,7 @@ export default function Home() {
           </button>
         </form>
 
-        {data && (
+        {report && (
           <>
             <div
               style={{
@@ -210,6 +264,10 @@ export default function Home() {
     </main>
   );
 }
+
+/* =========================
+   Styles
+========================= */
 
 const labelStyle = {
   display: "block",

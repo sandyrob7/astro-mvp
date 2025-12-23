@@ -5,18 +5,44 @@ import { NextRequest, NextResponse } from "next/server";
  * Body:
  * {
  *   name: string
+ *   gender: string
  *   dob: string (YYYY-MM-DD)
+ *   hour: number (0–23)
+ *   minute: number (0–59)
  *   place: string
  * }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, dob, place } = body;
 
-    if (!name || !dob || !place) {
+    const {
+      name,
+      gender,
+      dob,
+      hour,
+      minute,
+      place,
+    } = body;
+
+    // ---- Basic validation ----
+    if (
+      !name ||
+      !gender ||
+      !dob ||
+      hour === undefined ||
+      minute === undefined ||
+      !place
+    ) {
       return NextResponse.json(
         { errors: ["Missing required fields"] },
+        { status: 400 }
+      );
+    }
+
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return NextResponse.json(
+        { errors: ["Invalid time provided"] },
         { status: 400 }
       );
     }
@@ -24,10 +50,12 @@ export async function POST(req: NextRequest) {
     // ---- Parse DOB ----
     const [year, month, day] = dob.split("-").map(Number);
 
-    // ---- TEMP defaults (until frontend adds fields) ----
-    const gender = "male";
-    const hour = 12;
-    const minute = 0;
+    if (!year || !month || !day) {
+      return NextResponse.json(
+        { errors: ["Invalid date format"] },
+        { status: 400 }
+      );
+    }
 
     // ---- Geocode place → lat/lon ----
     const geoRes = await fetch(
@@ -57,7 +85,7 @@ export async function POST(req: NextRequest) {
     const hfUrl =
       "https://sandyrob7-astro-engine.hf.space/v1/calculate" +
       `?name=${encodeURIComponent(name)}` +
-      `&gender=${gender}` +
+      `&gender=${encodeURIComponent(gender)}` +
       `&year=${year}` +
       `&month=${month}` +
       `&day=${day}` +
@@ -72,12 +100,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       input: {
         name,
+        gender,
         dob,
+        hour,
+        minute,
         place,
         lat,
         lon,
-        hour,
-        minute,
       },
       ...hfJson,
     });
