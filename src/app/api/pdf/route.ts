@@ -15,12 +15,11 @@ export async function POST(req: NextRequest) {
   });
 
   const page = await browser.newPage();
-
   await page.setContent(renderPdfHtml(report), {
     waitUntil: "networkidle0",
   });
 
-  const pdfUint8 = await page.pdf({
+  const pdfBytes = await page.pdf({
     format: "A4",
     margin: {
       top: "24mm",
@@ -32,12 +31,15 @@ export async function POST(req: NextRequest) {
 
   await browser.close();
 
-  // ✅ THE ONLY RETURN TYPE NEXT.JS APP ROUTER NEVER ARGUES WITH
-  const pdfBlob = new Blob([pdfUint8], {
-    type: "application/pdf",
+  // ✅ STREAM: Turbopack + TS + App Router safe
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(pdfBytes);
+      controller.close();
+    },
   });
 
-  return new Response(pdfBlob, {
+  return new Response(stream, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="astrology-report.pdf"',
