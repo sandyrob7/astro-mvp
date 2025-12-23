@@ -2,6 +2,53 @@
 
 import { useState } from "react";
 
+/* ---------- helpers ---------- */
+
+const SIGNS = [
+  "Aries","Taurus","Gemini","Cancer","Leo","Virgo",
+  "Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"
+];
+
+function signFromLongitude(lon: number) {
+  return SIGNS[Math.floor(((lon % 360) + 360) / 30)];
+}
+
+function buildReport(api: any) {
+  const chart = api.chart;
+
+  return {
+    meta: {
+      name: api.input?.name,
+      generatedAt: new Date().toISOString(),
+    },
+
+    birth: {
+      date: api.input?.dob,
+      place: api.input?.place,
+      ascendant: {
+        longitude: chart.houses.ascendant,
+        sign: signFromLongitude(chart.houses.ascendant),
+      },
+    },
+
+    planets: Object.entries(chart.planets).map(
+      ([planet, p]: any) => ({
+        planet,
+        sign: signFromLongitude(p.longitude),
+        house: p.house,
+      })
+    ),
+
+    aspects: chart.aspects.map((a: any) => ({
+      between: a.between.join(" – "),
+      type: a.type,
+      orb: a.orb,
+    })),
+  };
+}
+
+/* ---------- component ---------- */
+
 export default function Home() {
   const [data, setData] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
@@ -22,7 +69,7 @@ export default function Home() {
 
     const json = await res.json();
     setData(json);
-    setReport(json); // temporary: API response used as report
+    setReport(buildReport(json)); // ✅ fixed
   }
 
   async function downloadPdf(rep: any) {
@@ -44,22 +91,48 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 500, margin: "50px auto" }}>
+    <main style={{ maxWidth: 600, margin: "50px auto", fontFamily: "sans-serif" }}>
       <h2>Astrology Demo</h2>
 
       <form onSubmit={submit}>
         <input name="name" placeholder="Name" required />
-        <br />
+        <br /><br />
         <input type="date" name="dob" required />
-        <br />
+        <br /><br />
         <input name="place" placeholder="Place of Birth" required />
-        <br />
+        <br /><br />
         <button type="submit">Generate</button>
       </form>
 
-      {data && (
+      {report && (
         <>
-          <pre>{JSON.stringify(data, null, 2)}</pre>
+          <hr style={{ margin: "30px 0" }} />
+
+          <h3>Birth Summary</h3>
+          <p><b>Name:</b> {report.meta.name}</p>
+          <p><b>Date:</b> {report.birth.date}</p>
+          <p><b>Place:</b> {report.birth.place}</p>
+          <p>
+            <b>Ascendant:</b> {report.birth.ascendant.sign}
+          </p>
+
+          <h3>Planets</h3>
+          <ul>
+            {report.planets.map((p: any) => (
+              <li key={p.planet}>
+                {p.planet}: {p.sign}, House {p.house}
+              </li>
+            ))}
+          </ul>
+
+          <h3>Aspects</h3>
+          <ul>
+            {report.aspects.map((a: any, i: number) => (
+              <li key={i}>
+                {a.between} ({a.type}, orb {a.orb}°)
+              </li>
+            ))}
+          </ul>
 
           <button
             onClick={() => downloadPdf(report)}
