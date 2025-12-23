@@ -1,9 +1,9 @@
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { renderPdfHtml } from "@/lib/pdfTemplate";
 
-export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const report = await req.json();
